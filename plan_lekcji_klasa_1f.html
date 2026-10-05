@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan Lekcji Klasa 1F - Harmonogram</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Timeline styling */
+        .time-slot-line {
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .time-slot-hour {
+            border-bottom: 1px solid #e2e8f0;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .lesson-card {
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .lesson-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -4px rgba(0,0,0,0.12);
+        }
+    </style>
+</head>
+<body class="text-slate-800 bg-slate-50 min-h-screen flex flex-col justify-between">
+
+    <div>
+        <!-- Live Status Header Banner -->
+        <div id="liveBanner" class="bg-indigo-600 text-white px-4 py-3 shadow-md sticky top-0 z-30 transition-all">
+            <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-sm">
+                <div class="flex items-center gap-3">
+                    <span class="relative flex h-3 w-3">
+                      <span id="livePulse" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <div id="statusText" class="font-medium tracking-wide text-xs sm:text-sm">
+                        Ładowanie stanu lekcji...
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 text-xs opacity-90 font-mono bg-indigo-700/60 px-3 py-1 rounded-full border border-indigo-500/30">
+                    <i class="fa-regular fa-clock"></i>
+                    <span id="currentTimeDisplay">--:--:--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Bar -->
+        <header class="bg-white border-b border-slate-200 shadow-sm sticky top-[48px] sm:top-[44px] z-20">
+            <div class="max-w-5xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+                    <div class="flex items-center gap-2">
+                        <div class="p-2 bg-indigo-100 text-indigo-700 rounded-lg">
+                            <i class="fa-solid fa-calendar-day text-lg"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-lg font-bold text-slate-900 leading-none">Klasa 1F</h1>
+                            <p class="text-xs text-slate-500 font-medium mt-0.5">Plan lekcji • 2024/2025</p>
+                        </div>
+                    </div>
+
+                    <!-- View Selector: Day vs Week -->
+                    <div class="bg-slate-100 p-1 rounded-xl flex items-center text-xs font-semibold">
+                        <button id="viewDayBtn" onclick="setViewMode('day')" class="px-3 py-1.5 rounded-lg bg-white text-indigo-600 shadow-sm transition-all">Dzień</button>
+                        <button id="viewWeekBtn" onclick="setViewMode('week')" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-all">Tydzień</button>
+                    </div>
+                </div>
+
+                <!-- Days Selector Row -->
+                <div class="flex items-center justify-between gap-1 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0" id="dayButtonsContainer">
+                    <!-- Day buttons injected by JS -->
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-5xl mx-auto px-2 sm:px-4 py-6">
+            
+            <!-- Information / Controls Bar -->
+            <div class="flex items-center justify-between mb-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm text-xs sm:text-sm">
+                <div class="flex items-center gap-2 text-slate-600">
+                    <i class="fa-solid fa-circle-info text-indigo-500 text-base"></i>
+                    <span>Czerwona linia wskaźnika podąża za aktualnym czasem. Kliknij lekcję, by edytować.</span>
+                </div>
+                <button onclick="resetToDefault()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors border border-slate-200 flex items-center gap-1.5 flex-shrink-0">
+                    <i class="fa-solid fa-rotate-left text-slate-500"></i>
+                    <span class="hidden sm:inline">Resetuj plan</span>
+                </button>
+            </div>
+
+            <!-- Schedule Container -->
+            <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden relative">
+                
+                <!-- Day / Date Display Header -->
+                <div class="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span id="selectedDayLabel" class="text-base font-bold text-slate-800">Poniedziałek</span>
+                        <span id="selectedDayBadge" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Dzisiaj</span>
+                    </div>
+                    <div class="text-xs text-slate-500 font-medium">
+                        Godziny zajęć: <span class="font-bold text-slate-700">08:00 - 15:20</span>
+                    </div>
+                </div>
+
+                <!-- Scrollable Schedule Grid -->
+                <div class="overflow-x-auto relative" id="scheduleScrollContainer">
+                    <div class="min-w-[650px] relative py-4" id="scheduleGrid">
+                        
+                        <!-- CURRENT TIME INDICATOR LINE -->
+                        <div id="timeIndicator" class="absolute left-0 right-0 z-20 pointer-events-none flex items-center transition-all duration-300 hidden">
+                            <div class="w-16 sm:w-20 pr-1 flex justify-end">
+                                <span id="indicatorTimeTag" class="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow-sm font-mono">10:14</span>
+                            </div>
+                            <div class="w-3 h-3 bg-red-600 rounded-full -ml-1.5 shadow-sm border-2 border-white"></div>
+                            <div class="flex-grow h-[2px] bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>
+                        </div>
+
+                        <!-- Time Rows Grid Background (07:30 to 16:00) -->
+                        <div id="timeRowsContainer" class="space-y-0">
+                            <!-- Injected by JS -->
+                        </div>
+
+                        <!-- Lessons Overlay Canvas Layer -->
+                        <div id="lessonsOverlay" class="absolute top-4 bottom-4 left-16 sm:left-20 right-4 pointer-events-none">
+                            <!-- Lesson Cards Injected dynamically by JS with coordinates -->
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit / Details Modal -->
+    <div id="editModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 transform transition-all">
+            
+            <div class="bg-slate-50 border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 bg-indigo-100 text-indigo-700 rounded-lg">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-base" id="modalTitle">Edycja Lekcji</h3>
+                        <p class="text-xs text-slate-500" id="modalSubtitle">Szczegóły przedmiotu</p>
+                    </div>
+                </div>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/60 transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="lessonForm" onsubmit="saveLesson(event)" class="p-6 space-y-4">
+                <input type="hidden" id="editDay">
+                <input type="hidden" id="editSlot">
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Nazwa przedmiotu</label>
+                    <input type="text" id="inputSubject" required placeholder="np. Matematyka" 
+                        class="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Nauczyciel</label>
+                        <input type="text" id="inputTeacher" placeholder="np. Maciej Pyrka" 
+                            class="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Sala</label>
+                        <input type="text" id="inputRoom" placeholder="np. 18, 105, WF" 
+                            class="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Kolor kafelka</label>
+                    <div class="grid grid-cols-6 gap-2 pt-1" id="colorPickerContainer">
+                        <!-- Colors injected dynamically -->
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Notatki / Sprawdziany / Zadania</label>
+                    <textarea id="inputNotes" rows="3" placeholder="Dodaj wpis dla tej lekcji..." 
+                        class="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                    <button type="button" onclick="clearLesson()" class="px-4 py-2 text-xs sm:text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200">
+                        <i class="fa-solid fa-trash-can mr-1.5"></i>Wyczyść lekcję
+                    </button>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
+                            Anuluj
+                        </button>
+                        <button type="submit" class="px-4 py-2 text-xs sm:text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors">
+                            Zapisz
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Exact Lesson Slots Timings (8 slots as defined in PDF)
+        const lessonSlots = [
+            { nr: 1, start: "08:00", end: "08:45", startMin: 480, endMin: 525 },
+            { nr: 2, start: "08:55", end: "09:40", startMin: 535, endMin: 580 },
+            { nr: 3, start: "09:50", end: "10:35", startMin: 590, endMin: 635 },
+            { nr: 4, start: "10:45", end: "11:30", startMin: 645, endMin: 690 },
+            { nr: 5, start: "11:45", end: "12:30", startMin: 705, endMin: 750 },
+            { nr: 6, start: "12:45", end: "13:30", startMin: 765, endMin: 810 },
+            { nr: 7, start: "13:45", end: "14:30", startMin: 825, endMin: 870 },
+            { nr: 8, start: "14:45", end: "15:20", startMin: 885, endMin: 920 }
+        ];
+
+        const daysList = [
+            { id: 0, name: "Poniedziałek", short: "Pon" },
+            { id: 1, name: "Wtorek", short: "Wto" },
+            { id: 2, name: "Środa", short: "Śro" },
+            { id: 3, name: "Czwartek", short: "Czw" },
+            { id: 4, name: "Piątek", short: "Pią" }
+        ];
+
+        // Color Presets mapping to image styling (Blue, Orange, Violet, Green, Cyan)
+        const colorPresets = {
+            blue: { bg: "bg-blue-700 hover:bg-blue-800", text: "text-white", badge: "bg-blue-900/60 text-blue-100", border: "border-blue-600" },
+            orange: { bg: "bg-orange-600 hover:bg-orange-700", text: "text-white", badge: "bg-orange-800/60 text-orange-100", border: "border-orange-500" },
+            purple: { bg: "bg-purple-700 hover:bg-purple-800", text: "text-white", badge: "bg-purple-900/60 text-purple-100", border: "border-purple-600" },
+            emerald: { bg: "bg-emerald-600 hover:bg-emerald-700", text: "text-white", badge: "bg-emerald-800/60 text-emerald-100", border: "border-emerald-500" },
+            cyan: { bg: "bg-cyan-600 hover:bg-cyan-700", text: "text-white", badge: "bg-cyan-800/60 text-cyan-100", border: "border-cyan-500" },
+            rose: { bg: "bg-rose-600 hover:bg-rose-700", text: "text-white", badge: "bg-rose-800/60 text-rose-100", border: "border-rose-500" },
+            amber: { bg: "bg-amber-600 hover:bg-amber-700", text: "text-white", badge: "bg-amber-800/60 text-amber-100", border: "border-amber-500" },
+            slate: { bg: "bg-slate-600 hover:bg-slate-700", text: "text-white", badge: "bg-slate-800/60 text-slate-100", border: "border-slate-500" }
+        };
+
+        // Complete timetable data from PDF scan
+        const defaultScheduleData = [
+            // Poniedziałek (0)
+            [
+                null,
+                { name: "Matematyka", teacher: "Maciej Pyrka", room: "18", color: "blue" },
+                { name: "WF", teacher: "Damian Kruk", room: "Sg", color: "emerald" },
+                { name: "Informatyka", teacher: "Witold Kostuj", room: "114", color: "cyan" },
+                { name: "Matematyka", teacher: "Maciej Pyrka", room: "18", color: "blue" },
+                null,
+                { name: "Chemia", teacher: "Kamila Puciłowska", room: "24", color: "purple" },
+                { name: "Geografia", teacher: "Piotr Bukowski", room: "205", color: "orange" }
+            ],
+            // Wtorek (1)
+            [
+                { name: "Historia", teacher: "Elżbieta Sokołowska", room: "103", color: "blue" },
+                { name: "Muzyka", teacher: "Piotr Złotkowski", room: "204", color: "orange" },
+                { name: "Język polski", teacher: "Igor Osmałek", room: "105", color: "purple" },
+                { name: "Język angielski", teacher: "Emilia Szarek", room: "119A", color: "orange" },
+                { name: "EDB", teacher: "Zbigniew Bilski", room: "203", color: "blue" },
+                { name: "WF", teacher: "Damian Kruk", room: "Sg", color: "emerald" },
+                { name: "Język angielski", teacher: "Emilia Szarek", room: "110", color: "orange" },
+                { name: "Geografia", teacher: "Piotr Bukowski", room: "205", color: "orange" }
+            ],
+            // Środa (2)
+            [
+                null,
+                null,
+                { name: "Język polski", teacher: "Igor Osmałek", room: "21", color: "purple" },
+                { name: "Historia", teacher: "Elżbieta Sokołowska", room: "103", color: "blue" },
+                { name: "Fizyka", teacher: "Damian Kruk", room: "18", color: "cyan" },
+                null,
+                { name: "Język angielski", teacher: "Emilia Szarek", room: "210", color: "orange" },
+                null
+            ],
+            // Czwartek (3)
+            [
+                { name: "Matematyka", teacher: "Maciej Pyrka", room: "18", color: "blue" },
+                { name: "Matematyka", teacher: "Maciej Pyrka", room: "18", color: "blue" },
+                { name: "WF", teacher: "Damian Kruk", room: "Sg", color: "emerald" },
+                { name: "Matematyka", teacher: "Maciej Pyrka", room: "18", color: "blue" },
+                { name: "Biologia", teacher: "Karolina Wasilewska-Sak", room: "203", color: "emerald" },
+                null,
+                { name: "Biznes i zarządz.", teacher: "Marta Dąbrowska", room: "204", color: "amber" },
+                { name: "Język niemiecki", teacher: "Magdalena Słowińska", room: "110", color: "rose" }
+            ],
+            // Piątek (4)
+            [
+                null,
+                { name: "Język polski", teacher: "Igor Osmałek", room: "105", color: "purple" },
+                { name: "Język polski", teacher: "Igor Osmałek", room: "105", color: "purple" },
+                { name: "Język angielski", teacher: "Emilia Szarek", room: "210", color: "orange" },
+                { name: "Godzina wychowawcza", teacher: "Damian Kruk", room: "119", color: "slate" },
+                { name: "Język niemiecki", teacher: "Magdalena Słowińska", room: "209", color: "rose" },
+                { name: "Geografia", teacher: "Piotr Bukowski", room: "205", color: "orange" },
+                null
+            ]
+        ];
+
+        // Global State Variables
+        let currentSchedule = [];
+        let selectedDay = 0; // 0 = Poniedziałek, 1 = Wtorek...
+        let viewMode = 'day'; // 'day' or 'week'
+        let selectedColor = 'blue';
+
+        // Timeline Constants (07:30 to 16:00 => 510 mins span)
+        const START_HOUR_MINS = 7 * 60 + 30; // 07:30 = 450 min
+        const END_HOUR_MINS = 16 * 60;        // 16:00 = 960 min
+        const TOTAL_MINS = END_HOUR_MINS - START_HOUR_MINS; // 510 mins
+        const HEIGHT_PER_MIN = 1.6; // 1 min = 1.6px -> Total height = ~816px
+
+        function initApp() {
+            // Set initial selected day to current day if weekday, else Monday
+            const today = new Date().getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+            if (today >= 1 && today <= 5) {
+                selectedDay = today - 1;
+            } else {
+                selectedDay = 1; // Default to Tuesday like sample
+            }
+
+            loadScheduleData();
+            renderDayButtons();
+            renderTimeGrid();
+            renderSchedule();
+            
+            // Start Clock and Indicator Loops
+            updateLiveClockAndStatus();
+            setInterval(updateLiveClockAndStatus, 1000);
+        }
+
+        function loadScheduleData() {
+            const saved = localStorage.getItem('class_1f_schedule_timeline');
+            if (saved) {
+                try {
+                    currentSchedule = JSON.parse(saved);
+                } catch(e) {
+                    currentSchedule = JSON.parse(JSON.stringify(defaultScheduleData));
+                }
+            } else {
+                currentSchedule = JSON.parse(JSON.stringify(defaultScheduleData));
+            }
+        }
+
+        function saveScheduleData() {
+            localStorage.setItem('class_1f_schedule_timeline', JSON.stringify(currentSchedule));
+        }
+
+        function resetToDefault() {
+            if (confirm("Czy na pewno chcesz przywrócić domyślny plan lekcji 1F? Wszystkie zmodyfikowane lekcje zostaną przywrócone.")) {
+                currentSchedule = JSON.parse(JSON.stringify(defaultScheduleData));
+                saveScheduleData();
+                renderSchedule();
+                updateLiveClockAndStatus();
+            }
+        }
+
+        function renderDayButtons() {
+            const container = document.getElementById('dayButtonsContainer');
+            container.innerHTML = '';
+
+            const todayIndex = (new Date().getDay() - 1);
+
+            daysList.forEach(day => {
+                const isSelected = (viewMode === 'day' && selectedDay === day.id);
+                const isToday = (todayIndex === day.id);
+
+                const btn = document.createElement('button');
+                btn.onclick = () => selectDay(day.id);
+                btn.className = `px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all flex-shrink-0 ${
+                    isSelected 
+                        ? 'bg-indigo-600 text-white shadow-md scale-105' 
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`;
+
+                btn.innerHTML = `
+                    <span>${day.name}</span>
+                    ${isToday ? `<span class="w-2 h-2 rounded-full ${isSelected ? 'bg-amber-300' : 'bg-indigo-600'}"></span>` : ''}
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        function selectDay(dayId) {
+            selectedDay = dayId;
+            if (viewMode === 'week') setViewMode('day');
+            renderDayButtons();
+            renderSchedule();
+            updateLiveClockAndStatus();
+        }
+
+        function setViewMode(mode) {
+            viewMode = mode;
+            document.getElementById('viewDayBtn').className = mode === 'day' 
+                ? 'px-3 py-1.5 rounded-lg bg-white text-indigo-600 shadow-sm transition-all' 
+                : 'px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-all';
+            document.getElementById('viewWeekBtn').className = mode === 'week' 
+                ? 'px-3 py-1.5 rounded-lg bg-white text-indigo-600 shadow-sm transition-all' 
+                : 'px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-all';
+
+            renderDayButtons();
+            renderSchedule();
+        }
+
+        function renderTimeGrid() {
+            const container = document.getElementById('timeRowsContainer');
+            container.innerHTML = '';
+
+            // Generate half-hour slots from 07:30 to 16:00
+            for (let min = START_HOUR_MINS; min <= END_HOUR_MINS; min += 30) {
+                const hour = Math.floor(min / 60);
+                const m = min % 60;
+                const timeString = `${hour.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                
+                const row = document.createElement('div');
+                row.className = `flex items-center h-[48px] ${m === 0 ? 'time-slot-hour' : 'time-slot-line'}`;
+                
+                row.innerHTML = `
+                    <div class="w-16 sm:w-20 pr-3 text-right text-xs font-semibold text-slate-400 select-none">
+                        ${timeString}
+                    </div>
+                    <div class="flex-grow h-full border-l border-slate-200"></div>
+                `;
+                container.appendChild(row);
+            }
+        }
+
+        function renderSchedule() {
+            const overlay = document.getElementById('lessonsOverlay');
+            overlay.innerHTML = '';
+
+            const dayLabel = document.getElementById('selectedDayLabel');
+            const dayBadge = document.getElementById('selectedDayBadge');
+            const todayIdx = (new Date().getDay() - 1);
+
+            if (viewMode === 'day') {
+                dayLabel.innerText = daysList[selectedDay].name;
+                if (todayIdx === selectedDay) {
+                    dayBadge.className = "text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800";
+                    dayBadge.innerText = "Dzisiaj";
+                } else {
+                    dayBadge.className = "text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600";
+                    dayBadge.innerText = daysList[selectedDay].short;
+                }
+
+                // Render cards for selected single day
+                const dayLessons = currentSchedule[selectedDay] || [];
+                dayLessons.forEach((lesson, slotIdx) => {
+                    if (!lesson || !lesson.name) return;
+                    const slot = lessonSlots[slotIdx];
+                    
+                    const topPx = (slot.startMin - START_HOUR_MINS) * HEIGHT_PER_MIN;
+                    const heightPx = (slot.endMin - slot.startMin) * HEIGHT_PER_MIN;
+
+                    const card = createLessonCardHtml(lesson, slot, selectedDay, slotIdx, topPx, heightPx, "100%", "0%");
+                    overlay.appendChild(card);
+                });
+
+            } else {
+                // Week View (All 5 Days side-by-side)
+                dayLabel.innerText = "Widok Tygodniowy";
+                dayBadge.className = "text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700";
+                dayBadge.innerText = "Pn - Pt";
+
+                const colWidth = 100 / 5; // 20% width per day
+
+                daysList.forEach((dayObj, dayIdx) => {
+                    const dayLessons = currentSchedule[dayIdx] || [];
+                    dayLessons.forEach((lesson, slotIdx) => {
+                        if (!lesson || !lesson.name) return;
+                        const slot = lessonSlots[slotIdx];
+
+                        const topPx = (slot.startMin - START_HOUR_MINS) * HEIGHT_PER_MIN;
+                        const heightPx = (slot.endMin - slot.startMin) * HEIGHT_PER_MIN;
+                        const leftPct = `${dayIdx * colWidth}%`;
+                        const widthPct = `calc(${colWidth}% - 4px)`;
+
+                        const card = createLessonCardHtml(lesson, slot, dayIdx, slotIdx, topPx, heightPx, widthPct, leftPct);
+                        overlay.appendChild(card);
+                    });
+                });
+            }
+        }
+
+        function createLessonCardHtml(lesson, slot, dayIdx, slotIdx, topPx, heightPx, width, left) {
+            const preset = colorPresets[lesson.color] || colorPresets.blue;
+            
+            const card = document.createElement('div');
+            card.style.top = `${topPx}px`;
+            card.style.height = `${heightPx}px`;
+            card.style.width = width;
+            card.style.left = left;
+            card.style.position = 'absolute';
+            
+            card.className = `lesson-card pointer-events-auto rounded-xl p-2.5 shadow-sm border ${preset.bg} ${preset.border} ${preset.text} cursor-pointer flex flex-col justify-between overflow-hidden`;
+            card.onclick = () => openModal(dayIdx, slotIdx);
+
+            card.innerHTML = `
+                <div>
+                    <div class="flex items-start justify-between gap-1">
+                        <h4 class="font-bold text-xs sm:text-sm leading-tight line-clamp-1">${escapeHtml(lesson.name)}</h4>
+                        ${lesson.room ? `<span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded ${preset.badge} flex-shrink-0">s. ${escapeHtml(lesson.room)}</span>` : ''}
+                    </div>
+                    <div class="text-[11px] opacity-90 font-medium mt-0.5">${slot.start} - ${slot.end}</div>
+                </div>
+                ${lesson.teacher ? `
+                    <div class="text-[10px] opacity-80 font-medium truncate flex items-center gap-1">
+                        <i class="fa-regular fa-user text-[9px]"></i>
+                        <span>${escapeHtml(lesson.teacher)}</span>
+                    </div>
+                ` : ''}
+            `;
+            return card;
+        }
+
+        function updateLiveClockAndStatus() {
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const seconds = now.getSeconds();
+            
+            // Format HH:MM:SS
+            const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            document.getElementById('currentTimeDisplay').innerText = timeStr;
+
+            const currentTotalMins = hours * 60 + minutes;
+            const currentDayIndex = now.getDay() - 1; // 0 = Mon, 4 = Fri
+
+            // UPDATE INDICATOR LINE POSITION
+            const indicator = document.getElementById('timeIndicator');
+            const timeTag = document.getElementById('indicatorTimeTag');
+
+            if (currentTotalMins >= START_HOUR_MINS && currentTotalMins <= END_HOUR_MINS) {
+                const indicatorTopPx = (currentTotalMins - START_HOUR_MINS) * HEIGHT_PER_MIN + 16; // +16px padding offset
+                indicator.style.top = `${indicatorTopPx}px`;
+                indicator.classList.remove('hidden');
+                timeTag.innerText = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            } else {
+                indicator.classList.add('hidden');
+            }
+
+            // UPDATE STATUS BANNER TEXT
+            const statusText = document.getElementById('statusText');
+            const pulse = document.getElementById('livePulse');
+
+            if (currentDayIndex < 0 || currentDayIndex > 4) {
+                // Weekend
+                statusText.innerHTML = `<strong>Weekend!</strong> Wolne od zajęć. Najbliższa lekcja w Poniedziałek o 08:55.`;
+                pulse.className = "hidden";
+                return;
+            }
+
+            const todaySchedule = currentSchedule[currentDayIndex] || [];
+            
+            // Check if within active lesson or break
+            let activeLesson = null;
+            let nextLesson = null;
+            let nextLessonSlot = null;
+
+            for (let i = 0; i < lessonSlots.length; i++) {
+                const slot = lessonSlots[i];
+                const lesson = todaySchedule[i];
+
+                if (currentTotalMins >= slot.startMin && currentTotalMins < slot.endMin) {
+                    if (lesson && lesson.name) {
+                        activeLesson = { lesson, slot };
+                    }
+                    break;
+                } else if (currentTotalMins < slot.startMin) {
+                    if (lesson && lesson.name) {
+                        nextLesson = lesson;
+                        nextLessonSlot = slot;
+                        break;
+                    }
+                }
+            }
+
+            if (activeLesson) {
+                const remaining = activeLesson.slot.endMin - currentTotalMins;
+                statusText.innerHTML = `<strong>Teraz:</strong> ${escapeHtml(activeLesson.lesson.name)} (${activeLesson.slot.start} - ${activeLesson.slot.end}${activeLesson.lesson.room ? ', s. ' + escapeHtml(activeLesson.lesson.room) : ''}${activeLesson.lesson.teacher ? ', ' + escapeHtml(activeLesson.lesson.teacher) : ''}) — <strong>Pozostało: ${remaining} min</strong>`;
+                pulse.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75";
+            } else if (nextLesson) {
+                const startDiff = nextLessonSlot.startMin - currentTotalMins;
+                statusText.innerHTML = `<strong>Przerwa:</strong> Następna lekcja to <strong>${escapeHtml(nextLesson.name)}</strong> o <strong>${nextLessonSlot.start}</strong> (za ${startDiff} min)`;
+                pulse.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75";
+            } else {
+                if (currentTotalMins < lessonSlots[0].startMin) {
+                    statusText.innerHTML = `<strong>Dzień szkolny:</strong> Pierwsza lekcja dzisiaj rozpoczyna się o 08:00.`;
+                } else {
+                    statusText.innerHTML = `<strong>Koniec lekcji na dziś!</strong> Odpocznij przed kolejnym dniem.`;
+                }
+                pulse.className = "hidden";
+            }
+        }
+
+        function openModal(dayIdx, slotIdx) {
+            const lesson = (currentSchedule[dayIdx] && currentSchedule[dayIdx][slotIdx]) 
+                ? currentSchedule[dayIdx][slotIdx] 
+                : { name: '', teacher: '', room: '', notes: '', color: 'blue' };
+
+            document.getElementById('editDay').value = dayIdx;
+            document.getElementById('editSlot').value = slotIdx;
+
+            const slot = lessonSlots[slotIdx];
+            document.getElementById('modalTitle').innerText = lesson.name ? `Edycja: ${lesson.name}` : 'Dodaj lekcję';
+            document.getElementById('modalSubtitle').innerText = `${daysList[dayIdx].name} • Lekcja ${slot.nr} (${slot.start} - ${slot.end})`;
+
+            document.getElementById('inputSubject').value = lesson.name || '';
+            document.getElementById('inputTeacher').value = lesson.teacher || '';
+            document.getElementById('inputRoom').value = lesson.room || '';
+            document.getElementById('inputNotes').value = lesson.notes || '';
+
+            selectedColor = lesson.color || 'blue';
+            renderColorPicker();
+
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        function renderColorPicker() {
+            const container = document.getElementById('colorPickerContainer');
+            container.innerHTML = '';
+
+            Object.keys(colorPresets).forEach(key => {
+                const preset = colorPresets[key];
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `h-8 rounded-lg border ${preset.bg} ${preset.border} flex items-center justify-center transition-all ${selectedColor === key ? 'ring-2 ring-indigo-600 ring-offset-2 scale-105' : 'opacity-80 hover:opacity-100'}`;
+                btn.onclick = () => {
+                    selectedColor = key;
+                    renderColorPicker();
+                };
+                if (selectedColor === key) {
+                    btn.innerHTML = `<i class="fa-solid fa-check text-white text-xs"></i>`;
+                }
+                container.appendChild(btn);
+            });
+        }
+
+        function saveLesson(event) {
+            event.preventDefault();
+            const dayIdx = parseInt(document.getElementById('editDay').value);
+            const slotIdx = parseInt(document.getElementById('editSlot').value);
+
+            const name = document.getElementById('inputSubject').value.trim();
+            const teacher = document.getElementById('inputTeacher').value.trim();
+            const room = document.getElementById('inputRoom').value.trim();
+            const notes = document.getElementById('inputNotes').value.trim();
+
+            if (!currentSchedule[dayIdx]) {
+                currentSchedule[dayIdx] = [null, null, null, null, null, null, null, null];
+            }
+
+            if (!name) {
+                currentSchedule[dayIdx][slotIdx] = null;
+            } else {
+                currentSchedule[dayIdx][slotIdx] = {
+                    name,
+                    teacher,
+                    room,
+                    notes,
+                    color: selectedColor
+                };
+            }
+
+            saveScheduleData();
+            renderSchedule();
+            updateLiveClockAndStatus();
+            closeModal();
+        }
+
+        function clearLesson() {
+            const dayIdx = parseInt(document.getElementById('editDay').value);
+            const slotIdx = parseInt(document.getElementById('editSlot').value);
+
+            if (currentSchedule[dayIdx]) {
+                currentSchedule[dayIdx][slotIdx] = null;
+            }
+
+            saveScheduleData();
+            renderSchedule();
+            updateLiveClockAndStatus();
+            closeModal();
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Start App
+        window.onload = initApp;
+    </script>
+</body>
+</html>
